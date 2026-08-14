@@ -1,5 +1,5 @@
 """
-Step 5: Train the stage-1 single-class sea grape detector on 640px tiles.
+Step 3: Train the stage-1 single-class sea grape detector on 640px tiles.
 
 yolo11s rather than yolo11n: tiles hold ~6-8 densely packed grapes and the nano
 backbone bottlenecks recall on small clustered objects. The extra cost is small
