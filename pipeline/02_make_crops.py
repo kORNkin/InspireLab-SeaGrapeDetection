@@ -1,5 +1,5 @@
 """
-Step 3: Cut the stage-2 classifier training set out of the full-resolution images.
+Step 2: Cut the stage-2 classifier training set out of the full-resolution images.
 
 Each ground-truth box becomes one crop, taken from the original 4640x3480 pixels
 rather than from a tile, so no resampling happens before the classifier sees it.

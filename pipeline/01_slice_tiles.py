@@ -1,5 +1,5 @@
 """
-Step 2: Slice the 4640x3480 images into 640x640 tiles for the stage-1 detector.
+Step 1: Slice the 4640x3480 images into 640x640 tiles for the stage-1 detector.
 
 Why tile: a grape is ~80x79 px. Feeding the full image to YOLO at imgsz=640
 shrinks it to ~11 px and destroys it. At 640 tiles the grape stays 80 px.
