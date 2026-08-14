@@ -9,11 +9,6 @@ about a grape relative to its neighbours, and a tight crop throws that context
 away. Inference must pad by the same 15% or the classifier sees a different
 distribution than it trained on.
 
-The under-annotated images (002/029/030) are *included* here. Under-annotation
-means boxes are missing, not that the boxes present are wrong -- every labelled
-box is still a real grape with a real maturity label, and the rare classes need
-every sample they can get.
-
 Output is a torchvision ImageFolder tree:
     build/crops/<split>/<ClassName>/<image>_<index>.jpg
 """

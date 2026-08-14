@@ -1,5 +1,5 @@
 """
-Step 6: Train the stage-2 maturity classifier on padded ground-truth crops.
+Step 4: Train the stage-2 maturity classifier on padded ground-truth crops.
 
 Two decisions carry most of the accuracy here.
 

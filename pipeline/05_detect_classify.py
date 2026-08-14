@@ -1,30 +1,8 @@
 """
-Two-stage sea grape inference: tiled YOLO detection -> MobileNetV3 maturity call,
-plus an optional RedSlime coverage estimate.
-
-Changes against the original predict_two_stage.py:
-
-  * Crops are cut with torchvision.ops.roi_align on the GPU in one op instead of
-    a Python loop of PIL crops. The old loop ran 150-400 times per image on the
-    CPU and dominated the non-YOLO time.
-
-  * Crops carry the same 15% context padding used to build the training set.
-    The old code cropped tight, so the classifier saw a different distribution
-    at inference than it trained on.
-
-  * Low-confidence crops are labelled "Uncertain" and still counted. The old
-    code silently dropped anything under 0.60, which quietly removed grapes
-    from a yield count.
-
-  * --downscale trades a little recall for a large speed win: at 2x the tile
-    count per image drops roughly 4x, and an 80px grape is still 40px.
-
-  * Tile stride defaults to 512 to match training. The 128px overlap already
-    exceeds the ~80px grape width, so the old 480 was doing redundant work.
+Two-stage sea grape inference: tiled YOLO detection -> MobileNetV3 maturity call.
 """
 
 import argparse
-import json
 import time
 from pathlib import Path
 
@@ -40,7 +18,6 @@ from ultralytics import YOLO
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_YOLO = BASE_DIR / "build" / "runs" / "stage1_yolo11s" / "weights" / "best.pt"
 DEFAULT_CLS = BASE_DIR / "build" / "runs" / "stage2_classifier" / "classifier_mobilenet_v3.pth"
-DEFAULT_SLIME = BASE_DIR / "build" / "slime_baseline" / "params.json"
 
 NORM_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 NORM_STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
@@ -72,7 +49,7 @@ def tile_offsets(total, tile, stride):
 
 class TwoStageDetector:
     def __init__(self, yolo_path=DEFAULT_YOLO, classifier_path=DEFAULT_CLS,
-                 slime_params=DEFAULT_SLIME, conf=0.25, uncertain_below=0.6):
+                 conf=0.25, uncertain_below=0.6):
         self.device = get_device()
         self.conf = conf
         self.uncertain_below = uncertain_below
@@ -82,7 +59,7 @@ class TwoStageDetector:
         ckpt = torch.load(classifier_path, map_location=self.device)
         self.class_names = ckpt["class_names"]
         self.img_size = ckpt.get("img_size", 128)
-        # Must match the padding used to build the crops in 03_make_crops.py.
+        # Must match the padding used to build the crops in 02_make_crops.py.
         self.context_pad = ckpt.get("context_pad", 0.15)
 
         self.classifier = models.mobilenet_v3_small(weights=None)
@@ -94,10 +71,6 @@ class TwoStageDetector:
 
         self.mean = NORM_MEAN.to(self.device)
         self.std = NORM_STD.to(self.device)
-
-        self.slime = None
-        if slime_params and Path(slime_params).exists():
-            self.slime = json.loads(Path(slime_params).read_text())
 
         with torch.no_grad():  # warm the graph so the first real image is not the slow one
             self.classifier(torch.zeros(1, 3, self.img_size, self.img_size, device=self.device))
@@ -196,47 +169,21 @@ class TwoStageDetector:
                           spatial_scale=1.0, sampling_ratio=2, aligned=True)
         crops = (crops - self.mean) / self.std
 
-        logits = torch.zeros(len(crops), len(self.class_names), device=self.device)
+        probs_all = torch.zeros(len(crops), len(self.class_names), device=self.device)
         for i in range(0, len(crops), 512):
             chunk = crops[i:i + 512]
             out = self.classifier(chunk).softmax(1)
             if tta:
                 out = (out + self.classifier(torch.flip(chunk, dims=[3])).softmax(1)) / 2
-            logits[i:i + len(chunk)] = out
+            probs_all[i:i + len(chunk)] = out
 
-        probs, idx = logits.max(1)
+        probs, idx = probs_all.max(1)
         return idx.cpu().numpy(), probs.cpu().numpy()
-
-    # ---------- slime ----------
-
-    def slime_coverage(self, img_bgr):
-        """Fraction of the frame covered by RedSlime, via the tuned HSV baseline."""
-        if not self.slime:
-            return None, None
-        p = self.slime["hsv"]
-        ds = self.slime["downscale"]
-        H, W = img_bgr.shape[:2]
-        small = cv2.resize(img_bgr, (W // ds, H // ds), interpolation=cv2.INTER_AREA)
-        hsv = cv2.cvtColor(cv2.GaussianBlur(small, (5, 5), 0), cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv,
-                           np.array([p["h_lo"], p["s_lo"], p["v_lo"]], np.uint8),
-                           np.array([p["h_hi"], p["s_hi"], p["v_hi"]], np.uint8))
-        k = np.ones((p["k"], p["k"]), np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, k, iterations=2)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, k, iterations=1)
-
-        min_area = self.slime["min_blob_frac"] * mask.size
-        n, labels, stats, _ = cv2.connectedComponentsWithStats((mask > 0).astype(np.uint8), 8)
-        keep = np.zeros_like(mask)
-        for i in range(1, n):
-            if stats[i, cv2.CC_STAT_AREA] >= min_area:
-                keep[labels == i] = 255
-        return float((keep > 0).mean()), keep
 
     # ---------- driver ----------
 
     def predict(self, image, output_path=None, tile=640, stride=512, iou=0.45,
-                downscale=1, tta=True, with_slime=True):
+                downscale=1, tta=True):
         img_bgr = cv2.imread(str(image)) if isinstance(image, (str, Path)) else image.copy()
         if img_bgr is None:
             raise ValueError(f"Could not read image: {image}")
@@ -248,10 +195,6 @@ class TwoStageDetector:
         t0 = time.perf_counter()
         cls_idx, cls_prob = self.classify(img_bgr, boxes, tta=tta)
         t_cls = (time.perf_counter() - t0) * 1000
-
-        t0 = time.perf_counter()
-        coverage, slime_mask = self.slime_coverage(img_bgr) if with_slime else (None, None)
-        t_slime = (time.perf_counter() - t0) * 1000
 
         detections, tally = [], {}
         for box, dc, ci, cp in zip(boxes.numpy(), det_conf.numpy(), cls_idx, cls_prob):
@@ -266,32 +209,25 @@ class TwoStageDetector:
                 "detector_conf": float(dc),
             })
 
-        total = t_det + t_cls + t_slime
+        total = t_det + t_cls
         print(f"  {len(detections):>4} grapes | " + " ".join(f"{k}={v}" for k, v in sorted(tally.items()))
-              + (f" | slime {100 * coverage:.1f}%" if coverage is not None else "")
-              + f" | detect {t_det:.0f}ms cls {t_cls:.0f}ms slime {t_slime:.0f}ms "
+              + f" | detect {t_det:.0f}ms cls {t_cls:.0f}ms "
                 f"= {total:.0f}ms ({1000 / total:.2f} img/s)")
 
         annotated = None
         if output_path:
-            annotated = self.draw(img_bgr, detections, slime_mask, coverage)
+            annotated = self.draw(img_bgr, detections)
             out = Path(output_path)
             out.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(out), annotated)
 
-        return {"detections": detections, "tally": tally, "slime_coverage": coverage,
-                "timing_ms": {"detect": t_det, "classify": t_cls, "slime": t_slime}}
+        return {"detections": detections, "tally": tally,
+                "timing_ms": {"detect": t_det, "classify": t_cls}}
 
-    def draw(self, img_bgr, detections, slime_mask=None, coverage=None, box_thickness=None):
+    def draw(self, img_bgr, detections, box_thickness=None):
         """Annotate detections. box_thickness overrides the resolution-derived default."""
         out = img_bgr.copy()
-        H, W = out.shape[:2]
-
-        if slime_mask is not None and slime_mask.any():
-            full = cv2.resize(slime_mask, (W, H), interpolation=cv2.INTER_NEAREST) > 0
-            tint = out.copy()
-            tint[full] = (0.5 * tint[full] + 0.5 * np.array([180, 90, 220])).astype(np.uint8)
-            out = tint
+        W = out.shape[1]
 
         # W/600 puts a ~80px grape in an 8px frame on a 4640px image, which stays
         # visible once the picture is scaled down for a report. The old W/1700
@@ -312,8 +248,6 @@ class TwoStageDetector:
         for d in detections:
             tally[d["class"]] = tally.get(d["class"], 0) + 1
         lines += [f"{k}: {v}" for k, v in sorted(tally.items())]
-        if coverage is not None:
-            lines.append(f"RedSlime: {100 * coverage:.1f}%")
 
         scale = max(0.6, W / 2200)
         pad, lh = int(14 * scale), int(34 * scale)
@@ -339,7 +273,6 @@ def main():
     ap.add_argument("--iou", type=float, default=0.45)
     ap.add_argument("--downscale", type=int, default=1, help="2 is ~4x fewer tiles")
     ap.add_argument("--no-tta", action="store_true")
-    ap.add_argument("--no-slime", action="store_true")
     args = ap.parse_args()
 
     det = TwoStageDetector(args.yolo, args.classifier, conf=args.conf)
@@ -354,7 +287,7 @@ def main():
         print(f"{p.name}:")
         out = dst / p.name if (dst.suffix == "" or src.is_dir()) else dst
         det.predict(p, output_path=out, tile=args.tile, stride=args.stride, iou=args.iou,
-                    downscale=args.downscale, tta=not args.no_tta, with_slime=not args.no_slime)
+                    downscale=args.downscale, tta=not args.no_tta)
     print(f"\nSaved to {dst}")
 
 

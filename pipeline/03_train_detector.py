@@ -4,16 +4,6 @@ Step 3: Train the stage-1 single-class sea grape detector on 640px tiles.
 yolo11s rather than yolo11n: tiles hold ~6-8 densely packed grapes and the nano
 backbone bottlenecks recall on small clustered objects. The extra cost is small
 next to the ~63 tiles each full image already costs at inference.
-
-Recall is the objective, not mAP50-95. A grape the detector misses is gone from
-the count for good, while a false positive still gets a second opinion from the
-stage-2 classifier and can be rejected there.
-
-Read the resulting metrics with the annotation caveat in mind: the labels cover
-only a subset of the resolvable spheres, so correctly finding an unlabelled
-grape is scored as a false positive. Precision and mAP are therefore floors,
-not estimates. Recall against labelled instances is the number that means
-something.
 """
 
 import argparse
