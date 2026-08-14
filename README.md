@@ -10,13 +10,13 @@ Original Image             |  Model Detection
 
 ```mermaid
 graph TD;
-    image[Image] --> yolo("`**YOLO** detect sea grapes`");
-    yolo e1@--> |Sea grapes at all stages of maturity| classifier("`**MobileNetV3** classify maturity of each sea grape`");
+    image[Image] ==> yolo("`**YOLO** detect sea grapes`");
+    yolo e1@==> |Sea grapes at all stages of maturity| classifier("`**MobileNetV3** classify maturity of each sea grape`");
     e1@{ animation: fast }
-    classifier -- Combine detection and classification --> result[Predicted image with labels]
+    classifier == Combine detection and classification ==> result[Predicted image with labels]
 ```
 
-## 1. Data Preparation
+### 1. Data Preparation
 
 The original dataset is missing many sea grape labels, which can confuse the model into treating real sea grapes as background.
 
@@ -27,7 +27,7 @@ Original Data             |  Updated Data
 ![](assets/original_data.jpg)  |  ![](assets/updated_data.jpg)
 
 
-## 2. Data Processing
+### 2. Data Processing
 
 > [pipeline/01_slice_tiles.py](pipeline/01_slice_tiles.py)
 
@@ -37,4 +37,4 @@ Original Data             |  Updated Data
 
 **Solve**: Each image is sliced into 640x640 tiles, matching YOLO's standard input size while preserving the grape's real pixel size.
 
-## 3. 
+### 3. 
