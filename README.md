@@ -119,3 +119,69 @@ Original Data             |  Updated Data
 - Combine results and output them
 
 ## Results
+
+### All bounding boxes
+
+| | Original | Updated | Model Prediction |
+| :--- | :--- | :--- | :--- |
+| Images | 46 | 46 | 46 |
+| Grape boxes | 3,834 | 8,469 | 8,122 |
+| Darkening | 838 | 1,505 | 1,191 |
+| Harvestable | 2,625 | 6,464 | 6,021 |
+| Whitening | 371 | 500 | 568 |
+| Uncertain | — | — | 342 |
+
+***Note: RedSlime*** *class was* ***excluded*** *due to an insufficient dataset.*
+
+---
+
+### Detection Metrices
+**Against the original dataset:**
+
+| IoU | Recall | Precision |
+| :--- | :--- | :--- |
+| 0.30 | 0.6351 | 0.2998 |
+| 0.50 | 0.5636 | 0.2661 |
+| 0.75 | 0.1664 | 0.0786 |
+
+**Against the updated dataset:**
+
+| IoU | Recall | Precision |
+| :--- | :--- | :--- |
+| 0.30 | 0.6931 | 0.7227 |
+| 0.50 | 0.6840 | 0.7132 |
+| 0.75 | 0.5179 | 0.5400 |
+
+***Note:***  
+*<u>IoU</u> measures the overlap between a predicted bounding box and the ground-truth bounding box.*
+* *IoU = 0.3 means 30% overlapping*
+* *IoU = 0.5 means 50% overlapping*
+* *IoU = 0.75 means 75% overlapping*
+
+*<u>Recall</u> measures how completely the model finds all real positive cases.*  
+&emsp; *= matched / (matched + missed)*  
+*<u>Precision</u> measures how reliable a positive guess is.*  
+&emsp; *= matched / total detections*  
+> *For example, **ground truth:** 135 grapes | **model found:** 285 boxes | **matched:** 97 boxes.*  
+*Recall = 97 / 135 = 0.719*  
+*Precision = 97 / 285 = 0.340*
+
+---
+This matrix below compares the count of sea grapes present across both datasets against those successfully detected by the model.
+
+| Subset | Boxes | Found by detection | Recall |
+| :--- | :--- | :--- | :--- |
+| Already in the original | 1,088 | 662 | 0.6085 |
+| Added by the update | 7,381 | 5,131 | 0.6952 |
+
+---
+
+Scored on detections matched at IoU 0.5, against the updated labels:
+
+| Truth | Darkening | Harvestable | Whitening | Uncertain | Recall |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Darkening | 679 | 24 | 0 | 25 | 0.933 |
+| Harvestable | 65 | 4502 | 83 | 168 | 0.934 |
+| Whitening | 0 | 2 | 241 | 4 | 0.976 |
+
+Accuracy **0.9360**, macro recall **0.9476**, with 5,793 matched grapes.

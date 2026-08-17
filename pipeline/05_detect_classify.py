@@ -86,8 +86,11 @@ class TwoStageDetector:
         if downscale > 1:
             img_bgr = cv2.resize(img_bgr, (W // downscale, H // downscale),
                                  interpolation=cv2.INTER_AREA)
+
+        # Read height and width of the image
         h, w = img_bgr.shape[:2]
 
+        # Check if the image size is smaller than a tile (640x640)
         if w <= tile and h <= tile:
             res = self.yolo.predict(img_bgr, conf=self.conf, verbose=False,
                                     device=str(self.device), max_det=1000)[0]
@@ -95,13 +98,18 @@ class TwoStageDetector:
             scores = res.boxes.conf.cpu()
         else:
             patches, origins = [], []
+
+            # Build tiles
             for oy in tile_offsets(h, tile, stride):
                 for ox in tile_offsets(w, tile, stride):
                     patches.append(img_bgr[oy:oy + tile, ox:ox + tile])
                     origins.append((ox, oy))
 
+
             all_boxes, all_scores = [], []
             margin = 5
+
+            # Feed the device (GPU or CPU) 32 tile images at once for fast detection
             for i in range(0, len(patches), 32):
                 chunk = patches[i:i + 32]
                 results = self.yolo.predict(chunk, conf=self.conf, verbose=False,
@@ -159,6 +167,7 @@ class TwoStageDetector:
         img_t = torch.from_numpy(rgb).to(self.device).permute(2, 0, 1).float().div_(255)
         img_t = img_t.unsqueeze(0)
 
+        # Add padding
         b = boxes.to(self.device).clone()
         pad_x = (b[:, 2] - b[:, 0]) * self.context_pad
         pad_y = (b[:, 3] - b[:, 1]) * self.context_pad
