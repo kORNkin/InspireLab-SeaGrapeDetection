@@ -275,7 +275,7 @@ class TwoStageDetector:
 
 def main():
     ap = argparse.ArgumentParser(description="Two-stage sea grape detector")
-    ap.add_argument("--image", default=str(BASE_DIR / "example_image.jpg"))
+    ap.add_argument("--image", default=str(BASE_DIR / "build/detect/test/images/052_jpg.rf.054ddcfb58f2686294b4507e218c3ca0.jpg"))
     ap.add_argument("--output", default=str(BASE_DIR / "build" / "predictions"))
     ap.add_argument("--yolo", default=str(DEFAULT_YOLO))
     ap.add_argument("--classifier", default=str(DEFAULT_CLS))

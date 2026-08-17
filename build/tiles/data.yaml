@@ -1,0 +1,7 @@
+path: /Users/supphakonyimi/Desktop/Internship/InspireLab/InspireLab-SeaGrapeDetection/build/tiles
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 1
+names: ["SeaGrape"]

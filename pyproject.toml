@@ -1,0 +1,11 @@
+[project]
+name = "Sea-Grape-Detection"
+version = "0.1.0"
+description = "Two-Stage AI System for Detecting and Classifying Sea Grape Maturity Stages"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "opencv-python>=5.0.0.93",
+    "pillow>=12.3.0",
+    "ultralytics>=8.4.95",
+]
