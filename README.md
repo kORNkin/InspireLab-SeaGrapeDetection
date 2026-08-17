@@ -4,17 +4,17 @@
 
 Image             |  Model Detection
 :-------------------------:|:-------------------------:
-![](assets/raw_image.jpg)  |  ![](assets/detected_image.jpg)
+ <a href="assets/raw_image.jpg" target="_blank"><img src="assets/raw_image.jpg" alt="Raw Image"></a> |  <a href="assets/detected_image.jpg" target="_blank"><img src="assets/detected_image.jpg" alt="Detected Image"></a>  
 
 ## Navigation
 - [Project Workflow](#project-workflow)
 - [Development](#development)
-    - [1. Prepare Data](#1-prepare-data)
-    - [2. Process Data](#2-process-data)
-    - [3. Build Dataset for Classifier](#3-build-dataset-for-classifier)
-    - [4. Train the Detector](#4-train-the-detector)
-    - [5. Train the Classifier](#5-train-the-classifier)
-    - [6. Detect & Classify Sea Grapes](#6-detect--classify-sea-grapes)
+    - [0. Prepare Data](#0-prepare-data)
+    - [1. Process Data](#1-process-data)
+    - [2. Build Dataset for Classifier](#2-build-dataset-for-classifier)
+    - [3. Train the Detector](#3-train-the-detector)
+    - [4. Train the Classifier](#4-train-the-classifier)
+    - [5. Detect & Classify Sea Grapes](#5-detect--classify-sea-grapes)
 - [Results](#results)
 
 
@@ -30,7 +30,7 @@ graph TD;
 
 ## Development
 
-### 1. Prepare Data
+### 0. Prepare Data
 
 **⚠ Problems**: The original dataset is missing many sea grape labels, which can confuse the model into treating real sea grapes as background.
 
@@ -38,13 +38,13 @@ graph TD;
 
 Original Data             |  Updated Data
 :-------------------------:|:-------------------------:
-![](assets/original_data.jpg)  |  ![](assets/updated_data.jpg)
+<a href="assets/original_data.jpg" target="_blank"><img src="assets/original_data.jpg" alt="Original Image"></a> |  <a href="assets/updated_data.jpg" target="_blank"><img src="assets/updated_data.jpg" alt="Updated Image"></a>  
 
 ---
 
-### 2. Process Data 
+### 1. Process Data 
 
-> [pipeline/01_slice_tiles.py](pipeline/01_slice_tiles.py)
+> <a href="pipeline/01_slice_tiles.py" target="_blank">pipeline/01_slice_tiles.py</a>
 
 **⚠ Problems**: 
 - The dataset contains 4640x3480 images, which are quite big but blurry. 
@@ -54,9 +54,9 @@ Original Data             |  Updated Data
 
 ---
 
-### 3. Build Dataset for Classifier
+### 2. Build Dataset for Classifier
 
-> [pipeline/02_make_crops.py](pipeline/02_make_crops.py)
+> <a href="pipeline/02_make_crops.py" target="_blank">pipeline/02_make_crops.py</a>
 
 **💡 Purpose**: Build a classifier dataset from YOLO dataset format.
 
@@ -67,9 +67,9 @@ Original Data             |  Updated Data
 
 ---
 
-### 4. Train the Detector
+### 3. Train the Detector
 
-> [pipeline/03_train_detector.py](pipeline/03_train_detector.py)
+> <a href="pipeline/03_train_detector.py" target="_blank">pipeline/03_train_detector.py</a>
 
 **💡 Purpose**: Train a detector model to detect sea grapes at all stages of maturity.
 
@@ -79,9 +79,9 @@ Original Data             |  Updated Data
 
 ---
 
-### 5. Train the Classifier
+### 4. Train the Classifier
 
-> [pipeline/04_train_classifier.py](pipeline/04_train_classifier.py)
+> <a href="pipeline/04_train_classifier.py" target="_blank">pipeline/04_train_classifier.py</a>
 
 **💡 Purpose**: Train a classifier model to classify maturity of each sea grape
 
@@ -98,8 +98,9 @@ Original Data             |  Updated Data
 
 ---
 
-### 6. Detect & Classify Sea Grapes
-> [pipeline/05_detect_classify.py](pipeline/05_detect_classify.py)
+### 5. Detect & Classify Sea Grapes
+
+> <a href="pipeline/05_detect_classify.py" target="_blank">pipeline/05_detect_classify.py</a>
 
 **💡 Purpose**: Detect and classify sea grapes by combining the two stages.
 
