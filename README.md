@@ -16,6 +16,8 @@ Image             |  Model Detection
     - [4. Train the Classifier](#4-train-the-classifier)
     - [5. Detect & Classify Sea Grapes](#5-detect--classify-sea-grapes)
 - [Results](#results)
+    - [All Bouding Boxes](#all-bounding-boxes)
+    - [Detection Metrices](#detection-metrices)
 
 
 ## Project Workflow
@@ -120,7 +122,7 @@ Original Data             |  Updated Data
 
 ## Results
 
-### All bounding boxes
+### All Bounding Boxes
 
 | | Original | Updated | Model Prediction |
 | :--- | :--- | :--- | :--- |
