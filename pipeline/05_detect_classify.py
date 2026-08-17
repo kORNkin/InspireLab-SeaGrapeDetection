@@ -2,23 +2,24 @@
 Two-stage sea grape inference: tiled YOLO detection -> MobileNetV3 maturity call.
 """
 
-import argparse
-import time
-from pathlib import Path
+import argparse # to read command-line arguments
+import time # to measure how long things take
+from pathlib import Path # to handle file paths
 
-import cv2
-import numpy as np
-import torch
-import torch.nn as nn
-from torchvision import models
-from torchvision.ops import nms as tv_nms
-from torchvision.ops import roi_align
-from ultralytics import YOLO
+import cv2 # OpenCV 
+import numpy as np # arrays and math
+import torch # PyTorch
+import torch.nn as nn # to build blocks for neural network layers
+from torchvision import models # classifier model 
+from torchvision.ops import nms as tv_nms # to remove duplicate overlapping boxes
+from torchvision.ops import roi_align # to crops regions out of an image on GPU
+from ultralytics import YOLO # detector model
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_YOLO = BASE_DIR / "build" / "runs" / "stage1_yolo11s" / "weights" / "best.pt"
 DEFAULT_CLS = BASE_DIR / "build" / "runs" / "stage2_classifier" / "classifier_mobilenet_v3.pth"
 
+# Standard Image Property to adjust input image for detector and classifer model
 NORM_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 NORM_STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
@@ -29,7 +30,7 @@ COLORS = {
     "Uncertain": (128, 128, 128),
 }
 
-
+# Select available GPU or CPU in priority order
 def get_device():
     if torch.backends.mps.is_available():
         return torch.device("mps")
@@ -37,7 +38,7 @@ def get_device():
         return torch.device("cuda")
     return torch.device("cpu")
 
-
+# Starting positions (stride 512px) for each tile
 def tile_offsets(total, tile, stride):
     if total <= tile:
         return [0]
@@ -46,7 +47,7 @@ def tile_offsets(total, tile, stride):
         offs.append(total - tile)
     return offs
 
-
+#
 class TwoStageDetector:
     def __init__(self, yolo_path=DEFAULT_YOLO, classifier_path=DEFAULT_CLS,
                  conf=0.25, uncertain_below=0.6):
@@ -56,9 +57,11 @@ class TwoStageDetector:
 
         self.yolo = YOLO(str(yolo_path))
 
+        # checkpoint that contains trained classifier model's info
         ckpt = torch.load(classifier_path, map_location=self.device)
         self.class_names = ckpt["class_names"]
         self.img_size = ckpt.get("img_size", 128)
+
         # Must match the padding used to build the crops in 02_make_crops.py.
         self.context_pad = ckpt.get("context_pad", 0.15)
 
